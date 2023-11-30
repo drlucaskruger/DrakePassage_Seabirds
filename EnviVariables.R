@@ -1,5 +1,12 @@
 
-
+library(terra)
+library(sf)
+library(lubridate)
+library(sp)
+library(magrittr)
+library(ggplot2)
+library(dplyr)  
+library(reshape2)
 ## -------load shapefiles-------------
 
 
@@ -39,6 +46,7 @@ coordf20$timestamp<-as.POSIXct(strptime(coordf20$DateTimeS, format="%Y-%m-%d T %
 coordf21$timestamp<-as.POSIXct(strptime(coordf21$DateTimeS, format="%Y-%m-%d T %H:%M:%S", tz="GMT"))
 coordf22$timestamp<-as.POSIXct(strptime(coordf22$BeginTime, format="%Y-%m-%d %H:%M:%S", tz="GMT")) # this year I used a Garmin watch, so the configuration was different
 
+summary(coordf20$timestamp)
 
 # standardize data sets
 head(coordf20)
@@ -540,3 +548,78 @@ ggplot(trsm,aes(lat,vo,colour=as.factor(Year)))+geom_point()
 
 
 trsm$swv<-sqrt((trsm$uo*trsm$uo)+(trsm$vo*trsm$vo))
+
+write.csv(trsm,"transects_envi_data.csv")
+
+ggplot(trsm,aes(lat,swv,colour=as.factor(Year)))+geom_point()
+ggplot(trsm,aes(sst,swv,colour=as.factor(Year)))+geom_point()
+
+
+###---------- zooplankton concentration--------------------
+
+# product ID: GLOBAL_ANALYSISFORECAST_PHY_001_024
+
+#https://doi.org/10.48670/moi-00016
+
+
+ncpath <- "C:/OnboardSeabirdCounts/EnviData/"
+ncname <- "cmems_mod_glo_bgc_my_0.083deg-lmtl_PT1D-i_1701281199592"
+ncfname <- paste(ncpath, ncname, ".nc", sep="")
+dname <- "zooc"
+tmp_raster <- brick(ncfname, varname=dname)
+tmp_brick <- brick(ncfname, varname=dname)
+plot(tmp_raster)
+
+
+# Loop through each layer (day) in the brick
+for (i in 1:nlayers(tmp_brick)) {
+  # Extract the raster for the current day
+  tmp_raster <- tmp_brick[[i]]
+  
+  
+  # Save raster to file
+  writeRaster(tmp_raster, filename = paste0("zooc_output_day_", i, ".tif"), format = "GTiff", overwrite = TRUE)
+}
+
+
+
+# Create an empty list to store the extracted values
+extracted_values <- list()
+tmp_brick
+# Loop through each row in "trs"
+for (i in 1:nrow(trsm)) {
+  # Extract the timestamp, lat, and lon for the current row
+  current_timestamp <- trsm$timestamp[i]
+  current_lat <- trsm$lat[i]
+  current_lon <- trsm$lon[i]
+  
+  # Find the corresponding raster layer in the brick based on the timestamp
+  current_day <- as.integer(as.numeric(difftime(current_timestamp, min(trsm$timestamp), units = "days")) + 1)
+  current_raster <- tmp_brick[[3]]
+  
+  # Create a SpatialPoints object for extraction
+  points <- SpatialPoints(matrix(c(current_lon, current_lat), ncol = 2), proj4string = CRS(proj4string(current_raster)))
+  
+  # Extract the value at the specified coordinates
+  extracted_value <- extract(current_raster, points)
+  
+  # Store the extracted value in the list
+  extracted_values[[i]] <- c(timestamp = current_timestamp, value = extracted_value)
+}
+
+# Convert the list to a data frame
+result_zooc<- do.call(rbind, extracted_values)
+
+head(result_zooc)
+result_zooc<-data.frame(result_zooc)
+
+trsm$zooc<-result_zooc$value
+
+
+ggplot(trsm,aes(lat,zooc,colour=as.factor(Year)))+geom_point()
+
+
+write.csv(trsm,"transects_envi_data.csv")
+
+ggplot(trsm,aes(lat,swv,colour=as.factor(Year)))+geom_point()
+ggplot(trsm,aes(sst,swv,colour=as.factor(Year)))+geom_point()
