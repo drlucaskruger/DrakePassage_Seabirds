@@ -555,11 +555,11 @@ ggplot(trsm,aes(lat,swv,colour=as.factor(Year)))+geom_point()
 ggplot(trsm,aes(sst,swv,colour=as.factor(Year)))+geom_point()
 
 
-###---------- zooplankton concentration--------------------
+###---------- Mass content of zooplankton expressed as carbon in sea water (g/m2)--------------------
 
-# product ID: GLOBAL_ANALYSISFORECAST_PHY_001_024
+# product ID: GLOBAL_MULTIYEAR_BGC_001_033
 
-#https://doi.org/10.48670/moi-00016
+#https://doi.org/10.48670/moi-00020
 
 
 ncpath <- "C:/OnboardSeabirdCounts/EnviData/"
