@@ -11,6 +11,7 @@ library(patchwork)
 library(sjPlot)
 library(vegan)
 library(performance)
+library(lmerTest)
 
 ### -------------load counting data
 
@@ -84,7 +85,45 @@ dfom<-na.omit(dfmm)
 
 head(dfom)
 
-ggplot(dfom,aes(Prion,BBA))+geom_point()
+ggplot(dfom,aes(lat,chl))+
+  geom_smooth(linewidth=1,span=0.99,method="gam",formula=y~s(x,k=5))+ 
+  geom_point()+coord_flip()+theme_bw()+xlab("Latitude")+ylab("mg/m3")+
+  ggtitle(label="a. Chlorophyll-a concentration")+
+  
+  
+  ggplot(dfom,aes(lat,zoo))+
+  geom_smooth(linewidth=1,span=0.99,method="gam",formula=y~s(x,k=6))+ 
+  geom_point()+coord_flip()+theme_bw()+xlab("Latitude")+ylab("g/m2")+
+  ggtitle(label="b. Zooplankton concentration")+
+  
+  ggplot(dfom,aes(lat,sst))+
+  geom_smooth(linewidth=1,span=0.99,method="gam",formula=y~s(x,k=7))+ 
+  geom_point()+coord_flip()+theme_bw()+xlab("Latitude")+ylab("°C")+
+  ggtitle(label="c. Sea surface temperature")+
+  
+  
+  ggplot(dfom,aes(lat,mld))+
+  geom_smooth(linewidth=1,span=0.99,method="gam",formula=y~s(x,k=4))+ 
+  geom_point()+coord_flip()+theme_bw()+xlab("Latitude")+ylab("m")+
+  ggtitle(label="d. Thickness of the mixed layer")+
+  
+  
+  ggplot(dfom,aes(lat,ws))+
+  geom_smooth(linewidth=1,span=0.99,method="gam",formula=y~s(x,k=4))+ 
+  geom_point()+coord_flip()+theme_bw()+xlab("Latitude")+ylab("m/s")+
+  ggtitle(label="e. Wind speed")+
+  
+  
+  ggplot(dfom,aes(lat,swv))+
+  geom_smooth(linewidth=1,span=0.99,method="gam",formula=y~s(x,k=4))+ 
+  geom_point()+coord_flip()+theme_bw()+xlab("Latitude")+ylab("m/s")+
+  ggtitle(label="f. Sea water velocity")
+
+
+
+# correct some outliers to be closer to the local mean
+dfom$mld[dfom$mld>150]<-50
+dfom$ws[dfom$ws<6 & dfom$lat>-56]<-10
 
 ### ----- environmental and species relations (interspecific associations)----
 ### canonical correspondence analysis
@@ -126,21 +165,21 @@ sps$sp<-row.names(sps)
 
 summary(sps)
 
-sps$RDA1<-sps$RDA1/2.6372
-sps$RDA2<-sps$RDA2/1.246
+sps$RDA1<-sps$RDA1/2.53
+sps$RDA2<-sps$RDA2/1.131
 
 vars$vars<-row.names(vars) 
 
 
 summary(vars)
 
-vars$RDA1<-vars$RDA1/0.3253
-vars$RDA2<-vars$RDA2/0.2695
+vars$RDA1<-((vars$RDA1/0.6))
+vars$RDA2<-((vars$RDA2/0.5))
 
 summary(scr)
 
-scr$RDA1<-scr$RDA1/2.14
-scr$RDA2<-scr$RDA2/2.662
+scr$RDA1<-scr$RDA1/2.20
+scr$RDA2<-scr$RDA2/2.9
 
 scores<-data.frame(dfom[1:2],scr)
 
@@ -153,7 +192,7 @@ ggplot()+
   geom_vline(xintercept = 0,linewidth=1,linetype="dashed",colour="grey50")+
   geom_text(data=sps,aes(x=RDA1,y=RDA2,label=sp),colour="red2",size=3)+
   geom_text(data=vars,aes(x=RDA1,y=RDA2,label=vars),colour="blue2",size=5)+
-  theme_bw()+xlab("RDA 1 (58.6%)")+ylab("RDA 2 (31.9%)")
+  theme_bw()+xlab("RDA 1 (54.5%)")+ylab("RDA 2 (31.3%)")
 
 
 ### --------conspecific associations---------
@@ -161,37 +200,10 @@ ggplot()+
 ### ------ CHL, SST and WS 
 head(dfnn)
 
-(ggplot(na.omit(dfnn),aes(chl,Consp))+stat_smooth(method="glm", method.args = list(family = "binomial"))+
-  theme_bw()+xlab("mg/m3")+ylab("Conspecific probability")+ggtitle(label="a. Chlrophyll-a concentration"))+
-
-  (ggplot(na.omit(dfnn),aes(zoo,Consp))+stat_smooth(method="glm", method.args = list(family = "binomial"))+
-     theme_bw()+xlab("g/m2")+ylab("Conspecific probability")+ggtitle(label="b. Mass content of zooplankton"))+
-
-(ggplot(na.omit(dfnn),aes(sst,Consp))+stat_smooth(method="glm", method.args = list(family = "binomial"))+
-  theme_bw()+xlab("°C")+ylab("Conspecific probability")+ggtitle(label="c. Sea surface temperature"))+
-
-
-(ggplot(na.omit(dfnn),aes(mld,Consp))+stat_smooth(method="glm", method.args = list(family = "binomial"))+
-  theme_bw()+xlab("meters")+ylab("Conspecific probability")+ggtitle(label="d. Thickness of the mixed layer"))+
-
-(ggplot(na.omit(dfnn),aes(ws,Consp))+stat_smooth(method="glm", method.args = list(family = "binomial"))+
-  theme_bw()+xlab("m/s")+ylab("Conspecific probability")+ggtitle(label="e. Surface Wind Speed"))+
-
-(ggplot(na.omit(dfnn),aes(swv,Consp))+stat_smooth(method="glm", method.args = list(family = "binomial"))+
-  theme_bw()+xlab("m/s")+ylab("Conspecific probability")+ggtitle(label="f. Sea water velocity"))
-
-
-
-(ggplot(subset(dfnn,Species=="SBPR"|Species=="BPT"|Species=="ANPR"),aes(swv,Consp))+stat_smooth(method="glm", method.args = list(family = "binomial"))+
-    theme_bw()+xlab("m/s")+ylab("Conspecific probability")+ggtitle(label="f. Sea water velocity"))+
-  facet_wrap(Species~.)
-
 (ggplot(subset(dfnn,Species=="BBA"|Species=="WA"|Species=="LMA"|Species=="SRA"|Species=="GHA"),aes(chl,Consp))+stat_smooth(method="glm", method.args = list(family = "binomial"))+
     theme_bw()+xlab("m/s")+ylab("Conspecific probability")+ggtitle(label="f. Sea water velocity"))+
   facet_wrap(Species~.)
 
-
-library(lmerTest)
 
 dfnn$zchl<-scale(dfnn$chl)
 spf
@@ -199,85 +211,89 @@ dfN<-merge(dfnn,spf)
 
 dfN5<-subset(dfN,totcount>5)
 
+
+# correct a couple outliers:
+
+dfN5$mld[dfN5$mld>150]<-50
+dfN5$ws[dfN5$ws<6 & dfN5$lat>-56]<-10
+
 lmer1<-glmer(Consp~chl+(chl|Species),data=dfN5,family="binomial")
 lmer01<-glm(Consp~chl,data=dfN5,family="binomial")
 summary(lmer1)
 
 anova(lmer1,lmer01)
-
 lmer2<-glmer(Consp~zoo+(zoo|Species),data=dfN5,family="binomial")
 lmer02<-glm(Consp~zoo,data=dfN5,family="binomial")
 summary(lmer2)
 
 anova(lmer2,lmer02)
+1731.3-1383.5
+
 
 lmer3<-glmer(Consp~sst+(sst|Species),data=dfN5,family="binomial")
 lmer03<-glm(Consp~sst,data=dfN5,family="binomial")
 summary(lmer3)
 
 anova(lmer3,lmer03)
-
+1693.2-1355.7
 
 lmer4<-glmer(Consp~mld+(mld|Species),data=dfN5,family="binomial")
 lmer04<-glm(Consp~mld,data=dfN5,family="binomial")
 summary(lmer4)
 
 anova(lmer4,lmer04)
+1686.7-1345.6
+
 
 lmer5<-glmer(Consp~ws+(ws|Species),data=dfN5,family="binomial")
 lmer05<-glm(Consp~ws,data=dfN5,family="binomial")
 summary(lmer5)
 
 anova(lmer5,lmer05)
-
+1683.4-1368.8
 
 lmer6<-glmer(Consp~swv+(swv|Species),data=dfN5,family="binomial")
 lmer06<-glm(Consp~swv,data=dfN5,family="binomial")
 summary(lmer6)
 
 anova(lmer6,lmer06)
-
+1721.6-1412.0
 
 
 plot_model(lmer1,type="emm",terms="chl[all]",pred.type="re")+theme_bw()+
   xlab("mg/m3")+ylab("Conspecific probability")+ggtitle(label="a. Chlrophyll-a concentration")+
-#plot_model(lmer2,type="emm",terms="zoo[all]",pred.type="re")+theme_bw()+
-#  xlab("g/m2")+ylab("Conspecific probability")+ggtitle(label="b. Mass content of zooplankton")+
+plot_model(lmer2,type="emm",terms="zoo[all]",pred.type="re")+theme_bw()+
+xlab("g/m2")+ylab("Conspecific probability")+ggtitle(label="b. Mass content of zooplankton")+
 plot_model(lmer3,type="emm",terms="sst[all]",pred.type="re")+theme_bw()+
-  xlab("°C")+ylab("Conspecific probability")+ggtitle(label="b. Sea surface temperature")+
+  xlab("°C")+ylab("Conspecific probability")+ggtitle(label="c. Sea surface temperature")+
 plot_model(lmer4,type="emm",terms="mld[all]",pred.type="re")+theme_bw()+
-  xlab("meters")+ylab("Conspecific probability")+ggtitle(label="c. Thickness of the mixed layer")+
+  xlab("meters")+ylab("Conspecific probability")+ggtitle(label="d. Thickness of the mixed layer")+
 plot_model(lmer5,type="emm",terms="ws[all]",pred.type="re")+theme_bw()+
-  xlab("m/s")+ylab("Conspecific probability")+ggtitle(label="d. Surface Wind Speed")
-#plot_model(lmer6,type="emm",terms="swv[all]",pred.type="re")+theme_bw()+
- # xlab("m/s")+ylab("Conspecific probability")+ggtitle(label="f. Sea water velocity")
+  xlab("m/s")+ylab("Conspecific probability")+ggtitle(label="e. Surface Wind Speed")+
+plot_model(lmer6,type="emm",terms="swv[all]",pred.type="re")+theme_bw()+
+ xlab("m/s")+ylab("Conspecific probability")+ggtitle(label="f. Sea water velocity")
   
 plot_model(lmer1,type="re",sort.est="sort.all",grid=F)[[1]]+
   ggtitle(label="a.Chlrophyll-a concentration")+theme_bw()+ylab("odds ratio")+xlab("taxa")+
-#plot_model(lmer2,type="re",sort.est="sort.all",grid=F)[[2]]+
- # ggtitle(label="b. Mass content of zooplankton")+theme_bw()+ylab("odds ratio")+xlab("taxa")+
+plot_model(lmer2,type="re",sort.est="sort.all",grid=F)[[2]]+
+  ggtitle(label="b. Mass content of zooplankton")+theme_bw()+ylab("odds ratio")+xlab("taxa")+
 plot_model(lmer3,type="re",sort.est="sort.all",grid=F)[[2]]+
-  ggtitle(label="b. Sea surface temperature")+theme_bw()+ylab("odds ratio")+xlab("taxa")+
+  ggtitle(label="c. Sea surface temperature")+theme_bw()+ylab("odds ratio")+xlab("taxa")+
 plot_model(lmer4,type="re",sort.est="sort.all",grid=F)[[1]]+ylim(0.95,1.05)+
-  ggtitle(label="c. Thickness of the mixed layer")+theme_bw()+ylab("odds ratio")+xlab("taxa")+
+  ggtitle(label="d. Thickness of the mixed layer")+theme_bw()+ylab("odds ratio")+xlab("taxa")+
 plot_model(lmer5,type="re",sort.est="sort.all",grid=F)[[2]]+
-  ggtitle(label="d. Surface Wind Speed")+theme_bw()+ylab("odds ratio")+xlab("taxa")
-#plot_model(lmer6,type="re",sort.est="sort.all",grid=F,ci.lvl=0.25)[[2]]+
- # ggtitle(label="f. Sea water velocity")+theme_bw()+ylab("odds ratio")+xlab("taxa")
+  ggtitle(label="e. Surface Wind Speed")+theme_bw()+ylab("odds ratio")+xlab("taxa")+
+plot_model(lmer6,type="re",sort.est="sort.all",grid=F,ci.lvl=0.25)[[2]]+
+  ggtitle(label="f. Sea water velocity")+theme_bw()+ylab("odds ratio")+xlab("taxa")
 
 
+## diagnostic plots for random effects
+(plot_model(lmer1,type="diag")[[1]]+theme_bw()+
+plot_model(lmer2,type="diag")[[1]]+theme_bw())/
+(plot_model(lmer3,type="diag")[[1]]+theme_bw()+
 
-(plot_model(lmer1,type="diag")[[1]]+
-plot_model(lmer2,type="diag")[[1]]+
-plot_model(lmer3,type="diag")[[1]]+
-
-plot_model(lmer4,type="diag")[[1]]+
-plot_model(lmer5,type="diag")[[1]]+
-plot_model(lmer6,type="diag")[[1]])
-
-
-
-
-
+plot_model(lmer4,type="diag")[[1]]+theme_bw())/
+(plot_model(lmer5,type="diag")[[1]]+theme_bw()+
+plot_model(lmer6,type="diag")[[1]]+theme_bw())
 
 
